@@ -15,9 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && pip3 install --upgrade pip setuptools wheel \
     && rm -rf /var/lib/apt/lists/*
 
-# Set environment variable to avoid Rust build
-ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
-
 # Set work directory
 WORKDIR /app
 
@@ -84,3 +81,4 @@ EXPOSE 8000
 
 # Start Shuup application
 CMD ["python3", "-m", "shuup_workbench", "runserver", "0.0.0.0:8000"]
+##comment
