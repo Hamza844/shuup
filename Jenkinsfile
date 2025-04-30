@@ -1,19 +1,16 @@
-pipeline {
-    agent { label 'shuup' }
-
-    stages {
-        stage('test'){
+pipeline{
+    agent {label, shuup}
+    stages{
+        stage(build){
             steps{
-                echo "code is successfully test"
-            }
+                sh 'docker build -t frontend .'
+                sh 'docker images'
+            }       
         }
-
-
-
-
-        stage('build'){
+        stage(test){
             steps{
-                echo 'docker is success fully connected'
+                echo "code is successfully build"
+                sh 'uname'
             }
         }
     }
