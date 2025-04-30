@@ -7,13 +7,13 @@ LABEL maintainer="Eero Ruohola <eero.ruohola@shuup.com>"
 
 # Install system and build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-dev python3-pip python3-venv \
+    python3 python3-dev python3-pip python3-venv python3-pil \
     build-essential libssl-dev libffi-dev \
     cargo rustc \
+    libjpeg-dev zlib1g-dev \
     libpangocairo-1.0-0 \
-    zlib1g-dev \
     && pip3 install --upgrade pip setuptools wheel \
-    && rm -rf /var/lib/apt/lists/**
+    && rm -rf /var/lib/apt/lists/*
 
 # Set work directory
 WORKDIR /app
