@@ -7,5 +7,10 @@ pipeline {
                 echo "Repository cloned successfully"
             }
         }
+        stage('build'){
+            steps{
+                sh 'docker build -t py_frits .'
+            }
+        }
     }
 }
