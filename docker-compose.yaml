@@ -18,4 +18,4 @@ services:
       - /app/shuup/themes/classic_gray/static
       - /app/shuup/xtheme/static
     tty: true
-    restart: unless-stopped
+    
