@@ -23,7 +23,7 @@ pipeline {
 
         stage('build') {
             steps {
-                sh 'docker compose up -d'
+                sh 'docker build -t shuup-app .'
             }
         }
 
