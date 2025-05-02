@@ -1,18 +1,18 @@
 # ───────────────────────────────────────────────────────────────────────────────
 # 1. BUILDER STAGE
 # ───────────────────────────────────────────────────────────────────────────────
-FROM node:12.21.0-buster-slim AS builder
+FROM python:3.9-slim AS builder
 
 LABEL maintainer="Eero Ruohola <eero.ruohola@shuup.com>"
 
 # Install system and build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-dev python3-pip python3-venv python3-pil \
     build-essential libssl-dev libffi-dev \
     cargo rustc \
     libjpeg-dev zlib1g-dev \
     libpangocairo-1.0-0 \
-    && pip3 install --upgrade pip setuptools wheel \
+    python3-dev python3-pil \
+    && pip install --upgrade pip setuptools wheel \
     && rm -rf /var/lib/apt/lists/*
 
 # Set work directory
@@ -30,7 +30,7 @@ ENV DJANGO_SETTINGS_MODULE=shuup_workbench.settings
 ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
 
 # Set up Python virtual environment and install dependencies
-RUN python3 -m venv /opt/venv && . /opt/venv/bin/activate && \
+RUN python -m venv /opt/venv && . /opt/venv/bin/activate && \
     if [ "$EDITABLE" = "1" ]; then \
         pip install --no-cache-dir -r requirements-tests.txt && \
         pip install --no-cache-dir "jinja2<3.1" "markupsafe<2.1" "cryptography<3.4" && \
@@ -43,8 +43,9 @@ RUN python3 -m venv /opt/venv && . /opt/venv/bin/activate && \
     rm -rf /root/.cache/pip
 
 # Run database migrations and initialize Shuup
-RUN python3 -m shuup_workbench migrate && \
-    python3 -m shuup_workbench shuup_init
+RUN . /opt/venv/bin/activate && \
+    python -m shuup_workbench migrate && \
+    python -m shuup_workbench shuup_init
 
 # Create default admin user (admin/admin)
 RUN echo "\
@@ -53,7 +54,7 @@ from django.db import IntegrityError\n\
 try:\n\
     get_user_model().objects.create_superuser('admin', 'admin@admin.com', 'admin')\n\
 except IntegrityError:\n\
-    pass\n" | python3 -m shuup_workbench shell
+    pass\n" | python -m shuup_workbench shell
 
 # ───────────────────────────────────────────────────────────────────────────────
 # 2. RUNTIME STAGE
@@ -83,4 +84,4 @@ COPY --from=builder /app /app
 EXPOSE 8000
 
 # Start Shuup application
-CMD ["python3", "-m", "shuup_workbench", "runserver", "0.0.0.0:8000"]
+CMD ["python", "-m", "shuup_workbench", "runserver", "0.0.0.0:8000"]
