@@ -2,17 +2,27 @@ pipeline {
     agent { label 'shuup' }
 
     stages {
-        stage('build') {
+        stage('Trivy FS Scan') {
             steps {
-                sh 'docker build -t frontend .'
-                sh 'docker images'
+                sh 'trivy fs shuup/ --exit-code 1 --severity CRITICAL,HIGH --no-progress'
+                echo "code is successfull scan"
+        }
+        stage('compile'){
+            echo "code is successfull compile"
+        }
+        stage('SonarQube Analysis'){
+            steps{
+                echo "code is successfull"
             }
         }
-
-        stage('test') {
-            steps {
-                echo "code is successfully built"
-                sh 'uname'
+        stage('build'){
+            steps{
+                sh 'docker compose up -d'
+            }
+        }
+        stage('Trivy image scan'){
+            steps{
+                echo 'scan trivy the image'
             }
         }
     }
