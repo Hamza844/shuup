@@ -4,12 +4,12 @@ services:
   shuup:
     build:
       context: .
+      container_name: ecommerce1
       args:
         editable: 1
     ports:
       - "8000:8000"
     volumes:
-      - .:/app
       - /app/.sqlite
       - /app/shuup/admin/static
       - /app/shuup/front/static
