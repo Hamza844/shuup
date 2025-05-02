@@ -18,30 +18,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set work directory
 WORKDIR /app
 
-# Copy project files
-COPY . .
-
-# Build ARG for editable install
-ARG EDITABLE=0
+# Copy requirements first to leverage Docker cache
+COPY requirements-tests.txt .
 
 # Set environment variables
 ENV PATH="/opt/venv/bin:$PATH"
-ENV DJANGO_SETTINGS_MODULE=shuup_workbench.settings
+ENV VIRTUAL_ENV="/opt/venv"
 ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
 
-# Set up Python virtual environment and install dependencies
-RUN python -m venv /opt/venv && . /opt/venv/bin/activate && \
-    if [ "$EDITABLE" = "1" ]; then \
-        pip install --no-cache-dir -r requirements-tests.txt && \
-        pip install --no-cache-dir "jinja2<3.1" "markupsafe<2.1" "cryptography<3.4" && \
-        python setup.py build_resources; \
-    else \
-        pip install --no-cache-dir -r requirements-tests.txt && \
-        pip install --no-cache-dir shuup && \
-        pip install --no-cache-dir "jinja2<3.1" "markupsafe<2.1" "cryptography<3.4"; \
-    fi && \
-    apt-get purge -y cargo rustc && apt-get autoremove -y && rm -rf /root/.cargo /usr/lib/rustlib && \
-    rm -rf /root/.cache/pip
+# Create and activate virtual environment
+RUN python -m venv /opt/venv
+
+# Install Python dependencies
+RUN . /opt/venv/bin/activate && \
+    pip install --no-cache-dir -r requirements-tests.txt && \
+    pip install --no-cache-dir shuup && \
+    pip install --no-cache-dir "jinja2<3.1" "markupsafe<2.1" "cryptography<3.4"
+
+# Clean up build dependencies
+RUN apt-get purge -y cargo rustc && \
+    apt-get autoremove -y && \
+    rm -rf /root/.cargo /usr/lib/rustlib /root/.cache/pip
+
+# Copy the rest of the application
+COPY . .
+
+# Set Django settings
+ENV DJANGO_SETTINGS_MODULE=shuup_workbench.settings
 
 # Run database migrations and initialize Shuup
 RUN . /opt/venv/bin/activate && \
@@ -64,13 +67,13 @@ FROM python:3.9-slim
 
 LABEL maintainer="Eero Ruohola <eero.ruohola@shuup.com>"
 
-# Install only runtime dependencies
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpangocairo-1.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables
-ENV VIRTUAL_ENV=/opt/venv
+ENV VIRTUAL_ENV="/opt/venv"
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 ENV DJANGO_SETTINGS_MODULE=shuup_workbench.settings
 ENV PYTHONUNBUFFERED=1
@@ -78,12 +81,15 @@ ENV PYTHONUNBUFFERED=1
 # Set work directory
 WORKDIR /app
 
-# Copy only necessary artifacts from the builder stage
+# Copy virtual environment and application
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /app /app
+
+# Verify Django is installed (for debugging)
+RUN . /opt/venv/bin/activate && python -c "import django; print(django.__version__)"
 
 # Expose port
 EXPOSE 8000
 
-# Start Shuup application with correct Python
+# Start Shuup application
 CMD ["/opt/venv/bin/python", "-m", "shuup_workbench", "runserver", "0.0.0.0:8000"]
