@@ -54,7 +54,7 @@ from django.db import IntegrityError\n\
 try:\n\
     get_user_model().objects.create_superuser('admin', 'admin@admin.com', 'admin')\n\
 except IntegrityError:\n\
-    pass\n" | python -m shuup_workbench shell
+    pass\n" | /opt/venv/bin/python -m shuup_workbench shell
 
 # ───────────────────────────────────────────────────────────────────────────────
 # 2. RUNTIME STAGE
@@ -69,7 +69,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables
-ENV PATH="/opt/venv/bin:$PATH"
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 ENV DJANGO_SETTINGS_MODULE=shuup_workbench.settings
 ENV PYTHONUNBUFFERED=1
 
@@ -83,5 +84,5 @@ COPY --from=builder /app /app
 # Expose port
 EXPOSE 8000
 
-# Start Shuup application
-CMD ["python", "-m", "shuup_workbench", "runserver", "0.0.0.0:8000"]
+# Start Shuup application with correct Python
+CMD ["/opt/venv/bin/python", "-m", "shuup_workbench", "runserver", "0.0.0.0:8000"]
