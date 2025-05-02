@@ -24,6 +24,11 @@ COPY . .
 # Build ARG for editable install
 ARG EDITABLE=0
 
+# Set environment variables
+ENV PATH="/opt/venv/bin:$PATH"
+ENV DJANGO_SETTINGS_MODULE=shuup_workbench.settings
+ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
+
 # Set up Python virtual environment and install dependencies
 RUN python3 -m venv /opt/venv && . /opt/venv/bin/activate && \
     if [ "$EDITABLE" = "1" ]; then \
@@ -33,11 +38,9 @@ RUN python3 -m venv /opt/venv && . /opt/venv/bin/activate && \
     else \
         pip install --no-cache-dir shuup && \
         pip install --no-cache-dir "jinja2<3.1" "markupsafe<2.1" "cryptography<3.4"; \
-    fi
-
-# Set environment variables
-ENV PATH="/opt/venv/bin:$PATH"
-ENV DJANGO_SETTINGS_MODULE=shuup_workbench.settings
+    fi && \
+    apt-get purge -y cargo rustc && apt-get autoremove -y && rm -rf /root/.cargo /usr/lib/rustlib && \
+    rm -rf /root/.cache/pip
 
 # Run database migrations and initialize Shuup
 RUN python3 -m shuup_workbench migrate && \
@@ -81,4 +84,3 @@ EXPOSE 8000
 
 # Start Shuup application
 CMD ["python3", "-m", "shuup_workbench", "runserver", "0.0.0.0:8000"]
-##comment
