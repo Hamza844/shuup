@@ -1,46 +1,38 @@
-# ───────────────────────────────────────────────────────────────────────────────
-# SINGLE STAGE BUILD (for now to eliminate variables)
-# ───────────────────────────────────────────────────────────────────────────────
-FROM python:3.9-slim
+FROM node:12.21.0-buster-slim as base
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential libssl-dev libffi-dev \
-    libjpeg-dev zlib1g-dev \
-    libpangocairo-1.0-0 \
-    python3-dev python3-pil \
-    && rm -rf /var/lib/apt/lists/*
+# This image is NOT made for production use.
+LABEL maintainer="Eero Ruohola <eero.ruohola@shuup.com>"
 
+RUN apt-get update \
+    && apt-get --assume-yes install \
+        libpangocairo-1.0-0 \
+        python3 \
+        python3-dev \
+        python3-pil \
+        python3-pip \
+    && rm -rf /var/lib/apt/lists/ /var/cache/apt/
+
+# These invalidate the cache every single time but
+# there really isn't any other obvious way to do this.
+COPY . /app
 WORKDIR /app
 
-# Copy requirements first for better caching
-COPY requirements-tests.txt .
+# The dev compose file sets this to 1 to support development and editing the source code.
+# The default value of 0 just installs the demo for running.
+ARG editable=0
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements-tests.txt && \
-    pip install --no-cache-dir "Django>=3.2,<4.0" && \
-    pip install --no-cache-dir -e .
+RUN if [ "$editable" -eq 1 ]; then pip3 install -r requirements-tests.txt && python3 setup.py build_resources; else pip3 install shuup; fi
 
-# Copy the rest of the application
-COPY . .
+RUN python3 -m shuup_workbench migrate
+RUN python3 -m shuup_workbench shuup_init
 
-# Verify Django installation
-RUN python -c "import django; print(f'Django {django.__version__} installed successfully')"
+RUN echo '\
+from django.contrib.auth import get_user_model\n\
+from django.db import IntegrityError\n\
+try:\n\
+    get_user_model().objects.create_superuser("admin", "admin@admin.com", "admin")\n\
+except IntegrityError:\n\
+    pass\n'\
+| python3 -m shuup_workbench shell
 
-# Initialize Shuup
-RUN python -m shuup_workbench migrate && \
-    python -m shuup_workbench shuup_init
-
-# Create admin user
-RUN echo "from django.contrib.auth import get_user_model; \
-    User = get_user_model(); \
-    try: User.objects.create_superuser('admin', 'admin@admin.com', 'admin'); \
-    except: pass" | python -m shuup_workbench shell
-
-# Environment variables
-ENV DJANGO_SETTINGS_MODULE=shuup_workbench.settings
-ENV PYTHONUNBUFFERED=1
-
-EXPOSE 8000
-CMD ["python", "-m", "shuup_workbench", "runserver", "0.0.0.0:8000"]
+CMD ["python3", "-m", "shuup_workbench", "runserver", "0.0.0.0:8000"]
