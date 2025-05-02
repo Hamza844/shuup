@@ -4,7 +4,6 @@ services:
   shuup:
     build:
       context: .
-      container_name: ecommerce1
       args:
         editable: 1
     ports:
