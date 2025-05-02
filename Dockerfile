@@ -36,6 +36,7 @@ RUN python -m venv /opt/venv && . /opt/venv/bin/activate && \
         pip install --no-cache-dir "jinja2<3.1" "markupsafe<2.1" "cryptography<3.4" && \
         python setup.py build_resources; \
     else \
+        pip install --no-cache-dir -r requirements-tests.txt && \
         pip install --no-cache-dir shuup && \
         pip install --no-cache-dir "jinja2<3.1" "markupsafe<2.1" "cryptography<3.4"; \
     fi && \
